@@ -4,18 +4,18 @@
 Verkefnið snýst um að safna og greina gögn frá tímataka.net um þátttöku keppenda í íslenskum hlaupum og hjólreiðakeppnum á árunum 2018 til 2024. Markmiðið er að bera saman frammistöðu tveggja keppenda, Bergdísar og Eyjólfs, með tilliti til þátttöku, tíma og sætaröðunar. Í verkefninu er byggt á sjálfvirkri gagnaöflun og gagnagreiningu með Python, R og SQLite.
 
 ## Strúktur
-timataka.py: Forrit til að sækja úrslit keppenda beint af tímataka.net.
-august.py: Forrit sem keyrir timataka.py fyrir mörg hlaup í ágúst 2018-2024.
-create_db.sql: SQL skrá sem býr til SQLite gagnagrunninn timataka.db.
-urls.txt: Textaskrá með slóðum að hlaupaúrslitum fyrir ágúst mánuð 2018-2024.
-data/: Inniheldur tvær CSV skrár, hlaup og hlaup_info með niðurstöðum hlaupa og keppenda.
-R/: Inniheldur R skrár til að hreinsa gögn og framkvæma greiningar.
+- timataka.py: Forrit til að sækja úrslit keppenda beint af tímataka.net.
+- august.py: Forrit sem keyrir timataka.py fyrir mörg hlaup í ágúst 2018-2024.
+- create_db.sql: SQL skrá sem býr til SQLite gagnagrunninn timataka.db.
+- urls.txt: Textaskrá með slóðum að hlaupaúrslitum fyrir ágúst mánuð 2018-2024.
+- data/: Inniheldur tvær CSV skrár, hlaup og hlaup_info með niðurstöðum hlaupa og keppenda.
+- R/: Inniheldur R skrár til að hreinsa gögn og framkvæma greiningar.
 
 
 ## Uppsetning gagnagrunns - keyrsluuppsetning 
 
 Forritin agust_url.py, timataka.py, create_db.sql má finna undir code möppunni í main. 
-Textaskráin urls.txt má finn undir möppunni data í main. 
+Textaskráin urls.txt og timataka.db má finn undir möppunni data í main. 
 
 Til að sækja gagnagrunninn þarf að hlaða forritunum á viðeigandi staði til að keyrsla virki. 
 
