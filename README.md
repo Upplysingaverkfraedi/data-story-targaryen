@@ -1,120 +1,154 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/t4XiNpEJ)
-# Gagnafrásögn, kynning og mælaborð
 
-## Verkefni
+## TL;DR
 
-Þetta verkefni er tvíþætt:
+Verkefnið snýst um að safna og greina gögn frá tímataka.net um þátttöku keppenda í íslenskum hlaupum og hjólreiðakeppnum á árunum 2018 til 2024. Markmiðið er að bera saman frammistöðu tveggja keppenda, Bergdísar og Eyjólfs, með tilliti til þátttöku, tíma og sætaröðunar. Í verkefninu er byggt á sjálfvirkri gagnaöflun og gagnagreiningu með Python, R og SQLite.
 
-1. **Skýrsla** – Þið þurfið að skila skýrslu þar sem þið útskýrið hvernig þið nálguðust gagnaöflun,
-   meðhöndlun gagna og hvaða niðurstöður þið teljið markverðastar og setjið fram sem mælaborð.
-2. **Mælaborð og kynning** – Þið þurfið að hanna mælaborð og halda 7 mínúta kynningu þar sem
-   þið útskýrið mælaborðið fyrir bekknum. Í kynningunni þarf að sýna hvernig mælaborðið virkar og
-   hvers vegna samnemendur ættu að nýta sér það.
+## Strúktur
+timataka.py: Forrit til að sækja úrslit keppenda beint af tímataka.net.
+august.py: Forrit sem keyrir timataka.py fyrir mörg hlaup í ágúst 2018-2024.
+create_db.sql: SQL skrá sem býr til SQLite gagnagrunninn timataka.db.
+urls.txt: Textaskrá með slóðum að hlaupaúrslitum fyrir ágúst mánuð 2018-2024.
+data/: Inniheldur tvær CSV skrár, hlaup og hlaup_info með niðurstöðum hlaupa og keppenda.
+R/: Inniheldur R skrár til að hreinsa gögn og framkvæma greiningar.
 
-### Mælaborð
 
-Mælaborðið er hannað fyrir samnemendur ykkar í upplýsingaverkfræði. Þau hafa einhverja grunnþekkingu
-á SQL, en eru ekki sérfræðingar í gagnavinnslu. Því er mikilvægt að:
+## Uppsetning gagnagrunns - keyrsluuppsetning 
 
-- **Sannfæra áhorfendur**: Sýnið þeim hvers vegna mælaborðið er gagnlegt og áhugavert.
-- **Skýrt viðmót**: Mælaborðið þarf að vera auðvelt í notkun og bjóða upp á skýra framsetningu
-  gagna.
+Forritin agust_url.py, timataka.py, create_db.sql má finna undir code möppunni í main. 
+Textaskráin urls.txt má finn undir möppunni data í main. 
 
-## Skipulag
+Til að sækja gagnagrunninn þarf að hlaða forritunum á viðeigandi staði til að keyrsla virki. 
 
-Það eru sex teymi í verkefninu, sem hver samanstendur af 4 einstaklingum (ath. það er mögulega
-að bætast nýr einstaklingur við teymið):
+1.	Keyra eftirfarandi skipun:
 
-- **Baratheon**
-- **Greyjoy**
-- **Lannister**
-- **Martell**
-- **Targaryen**
-- **Tyrell**
+   ```bash
+python3 agust_url.py --input_file data/urls.txt --output_dir data --debug
+```
 
-Þið getið valið á milli þriggja umfjöllunarefna:
+--input_file: Slóð að textaskrá sem inniheldur lista af URL-slóðum (einn á hverri línu).
+--output_dir: Mappan þar sem gögnin verða vistuð (sömu og í timataka.py).
+--debug: (Valfrjálst) Ef þetta flagg er sett, verður HTML skráin vistuð fyrir hvert hlaup.
+Athugið að þessi keyrsla gæti tekið langan tíma, þar sem það er mikið af URL linkum í textaskránni. Einnig væri hægt að keyra þetta í nokkrum hlutum. 
 
-- **Tímataka.net** – Hlaup frá ágúst mánuði undanfarin 7 ár
-    - Þar sem þið sækið gögnin fyrir frá `sqlite` verkefnum hinna teymanna, og sameinið við ykkar
-      gagnagrunn.
-- **Saga Ísfólksins** - Bókabálkurinn eftir Margit Sandemo
-    - Hér notið þið `isfolkid.db` gagnagrunninn sem við unnum með í `sqlite` verkefninu.
-- **Game of Thrones**.
-    - Hér notið þið _PostgreSQL_ gagnagrunnstenginguna sem við unnum með í `postgresql` verkefninu.
+2.	Keyra eftirfarandi skipun til að búa til gagnagrunninn:
 
-Aðeins tvö teymi mega vinna að sama efni. Skráning á umfjöllunarefni fer fram í mánudagstíma 
-þann 14. október á töflu, þar sem fyrstur kemur fyrstur fær.
+   ```bash
+sqlite3 timataka.db < create_db.sql
+```
+Eftir keyrslu er hægt að skoða töflurnar með því að opna þær í SQLite: 
 
-## Skil og kynning
+   ```bash
+Sqlite3 timataka.db
+```
 
-- **Skil á skýrslu**: PDF (eða html) útgáfa á skýrslan þarf að vera komin inn á Canvas fyrir 20.
-  október. Hún þarf líka að vera í GitHub repo'inu (sem þá t.d. `.md`, `.Rmd` eða `.tex` skrá).
-- **Kynning á mælaborði**: Þið kynnið mælaborðið í mánudagstíma þann 21. október. Munið að allir
-  meðlimir teymisins þurfa að taka jafnan þátt í kynningunni. Þið fáið 5-10 mínútur til að kynna,
-  þannig æfið ykkur áður en þið kynnið svo þið farið ekki yfir tímamörk.
+Og svo keyra eftirfarandi skipanir til að skoða töflurnar:
 
-## Frjálst val á framsetningu
+   ```bash
+SELECT*FROM hlaup limit 10; 
+```
 
-Það er engin krafa um að fylgja ákveðinni tegund af framsetningu fyrir þetta verkefni. Þetta efni er
-mjög frjálst, og þið eruð hvött til að vera skapandi. Þið getið „brainstormað“ hugmyndir og í
-sameiningu metið hversu áhrifaríkar þær eru. Ef þið eruð í vafa, er gott að leita ráða hjá kennara
-um hvað gæti verið áhrifaríkasta leiðin til að kynna efnið.
+Það er galli í create_db.sql forritinu sem gerir það að verkum að forritið nær ekki að sækja upplýsingarnar sem eiga að fara í timatöku töfluna. Þetta er hægt að laga með því að importa csv fileinu inná R. Þetta er hægt að gera með skipuninni: 
 
-Hins vegar er mikilvægt að myndirnar sem þið veljið til að sýna gögnin ykkar lýsi gagnasettinu vel
-og hjálpi ykkur að spinna áhugaverða sögu um gögnin sem fangar athygli áhorfenda. Þessi saga ætti að
-draga fram það sem þið teljið áhugaverðast við gögnin og hvernig hægt er að nýta þau.
+   ```bash
+dat <- read.csv("path/to/your/hlaup.csv") 
+head(data) # skoða fyrstu línurnar
+```
 
-## Aðalatriði sem skýrslan þarf að innihalda
+Hér munuð þið taka eftir því að það eru of margir dálkar í töflunni. Það eiga aðeins að vera 10 dálkar. Þetta getið þið séð með því að keyra skipunina:
 
-1. **Lýsing á gagnaöflun** – Hvernig voru gögnin fengin og hvaðan komu þau?
-2. **Gagnavinnsla** – Hvernig voru gögnin meðhöndluð?
-3. **Markverðustu niðurstöður** – Hverjar voru helstu niðurstöður ykkar?
-4. **Mælaborðið** – Hvernig mælaborð hönnuðuð þið og hver er tilgangur þess?
+   ```bash
+> colnames(dat)[1:11]
+```
+á console. 
+Þið getið séð að seinasti dálkurinn heitir Column_0, sem bendir til þess að dálkurinn sé tómur. 
+Til að eyða þessum auka dálkum er hægt að keyra skipunina: 
 
-## GitHub Repo
+   ```bash
+dat <- dat[,1:10]
+```
+Með þessu skrefi eyði ég öllum dálkum fyrir utan fyrstu 10 sem innihalda þær upplýsingar sem þörf er á. 
+Næst vistum við nýja hreinsaða gagnasafnið okkar sem csv skrá. Þetta er gert með skipuninni: 
 
-Öll verkefnin þurfa að vera unnin í GitHub repo sem teymið deilir. Þar þarf að vera uppfært
-`README.md` skjal með eftirfarandi:
+   ```bash
+write.csv(dat, 'Documents/GitHub/data-story-targaryen/data/hlaup.csv')
+```
+Þetta visstum við á sama stað og csv taflan okkar er, hlaup_info.
+Þá er gagnasafnið okkar timataka.db tilbúið til notkunar. 
 
-- **TL;DR** – Stutt útskýring á verkefninu ykkar og lykilniðurstöðum (til að hjálpa öðrum að skilja
-  verkefnið, og hvetja þau til kynna sér efnið frekar).
-- **Strúktur** - Hverig er repoið sett upp, t.d. lýsa möppum og mikilvægum skrám stuttlega.
-- **Keyrsluuppsetning** – Hvernig er hægt að keyra kóðann ykkar á öðrum tölvum. Passið að þetta sé
-  skýrt og auðvelt að fylgja eftir, og það sé ljóst hvernig eigi að nálgast viðkvæmar upplýsingar 
-  (einsog lykilorð og notendanöfn) ef við á.
+Til að tengjast SQLite gagnagrunninum og lesa töflur inni á R þarf að hlaða inn bóksöfnunum: 
 
-## Einkunnagjöf
+library(DBI) 
+library(RSQLite)
 
-Þið munuð ekki aðeins vinna að ykkar eigin verkefni, heldur þurfið þið einnig að gefa hinum teymunum
-einkunn eftir að hafa hlustað á kynningu þeirra. Einkunnin verður byggð á:
+Þessi bókasöfn eru notuð til að vinna með SQLite gagnagrunna í R. 
+Síðan keyrum við eftirfarandi skipun til að tengjast timataka.db: 
 
-- **Gagnafrásögn** – Hversu skýr og aðgengileg er kynningin þeirra? Hversu frumlegt og áhugavert er
-  efnið?
-- **Mælaborðið** – Hversu auðvelt er að nota mælaborðið? Hversu skýr er tilgangur þess?
+   ```bash
+con <- dbConnect(RSQLite::SQLite(), "Documents/GitHub/data-story-targaryen/data/timataka.db")
+dbListTables(con) #skoða hvaða töflur eru í gagnagrunninum. 
+```
+Það eru nokkrar tómar raðir í timataka_data töflunni, hægt er að taka þær út með skipuninni: 
 
-## Mikilvægar dagsetningar
+   ```bash
+# Hlaup sem voru ekki með keppendur undir timataka_data
+empty_names_per_hlaup <- timataka_data %>%
+  group_by(hlaup_id) %>%
+  summarise(Empty_Name_Count = sum(Name == "" | is.na(Name))) %>%
+  filter(Empty_Name_Count > 0)  # Filter out hlaup_id with zero empty names
 
-- **Skráning á umfjöllunarefni**: 14. október.
-- **Skil á skýrslu**: 20. október.
-- **Kynning á mælaborði**: 21. október.
+# Birta töfluna
+empty_names_per_hlaup
+```
+og svo keyra:
 
-## Viðbótarleiðbeiningar
+   ```bash
+# Gera timataka_data2 þar sem búið er að taka út þar sem Name er tómt og Rank er 0 líka. 
+timataka_data2 <- timataka_data %>%
+  filter(!(Name == "" & Rank == 0))
 
-- **Öll svör verða að vera rökstudd með skýrri röksemdafærslu.**
-- **PR (Pull Request)**: Þið þurfið að nota PR til að yfirfara lausnir hvers annars. Tvær samþykktir
-  eru nauðsynlegar fyrir hverja breytingu.
-- **Geymið ekki viðkvæmar upplýsingar í GitHub repo** – Notið `.gitignore` og umhverfisbreytur fyrir
-  lykilorð og notendanöfn.
+# Birta töfluna
+head(timataka_data2)
+```
 
----
+Þá er komin ný tafla sem heitir timataka_data2, með viðeigandi gögnum og þá er hægt að byrja að vinna með gögnin. 
 
-## Viðvörun: Ekki vista lykilorð í GitHub repo
+## Imports eða nauðsynleg bókasöfn til að keyra forrit:
 
-Að vista lykilorð, notendanöfn eða aðrar viðkvæmar upplýsingar í GitHub repo sem er opinber (public)
-er mjög alvarlegt öryggisbrot. Hér eru nokkrar ástæður fyrir því að það má aldrei gera þetta:
+Fyrir timtaka.py: 
 
-1. **Öryggisbrestur** – Opnar fyrir öryggisbrot.
-2. **Kostnaður** – Þriðji aðili gæti misnotað gögnin.
-3. **Git útgáfusaga** – Það er erfitt að fjarlægja viðkvæmar upplýsingar úr útgáfusögunni.
-4. **Orðspor** – Slíkar villur geta skaðað orðspor þitt sem forritari.
+   ```bash
+import requests # Til að sækja HTML gögn af vefnum 
+import pandas as pd # Til að vinna með gögn í DataFrames og skrifa CSV skrár 
+import argparse # Til að lesa inn og meðhöndla skipanalínu valkosti
+import re # Til að nota reglulegar segðir til að vinna með HTML gögn from datetime
+import datetime # Til að meðhöndla dagsetningar og tíma
+ import os # Til að vinna með skrár og skráarskipanir
+```
+
+Fyrir agust.py: 
+
+   ```bash
+import argparse # Til að lesa inn skipanalínu valkosti 
+import subprocess # Til að keyra önnur forrit innan Python (í þessu tilfelli 'tímataka.py')
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+![image](https://github.com/user-attachments/assets/63a80296-b5c3-4dd3-8468-54a4e7101ea0)
+
+
+
+
 
