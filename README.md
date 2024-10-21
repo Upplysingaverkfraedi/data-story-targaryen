@@ -146,7 +146,7 @@ import subprocess # Til að keyra önnur forrit innan Python (í þessu tilfelli
 
 
 
-![image](https://github.com/user-attachments/assets/63a80296-b5c3-4dd3-8468-54a4e7101ea0)
+
 
 
 
