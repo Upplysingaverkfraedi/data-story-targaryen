@@ -1,0 +1,335 @@
+---
+title: "data-story timataka.net"
+author: "Þráinn Ágúst, Ásdís, Gígja Marín og Ásdís Halla"
+date: "2024-10-14"
+output: rmdformats::readthedown
+---
+
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+```
+
+
+**Lesa inn alla pakka sem þarf**
+```{r, echo=FALSE, message=FALSE}
+library(tidyverse)
+library(rvest)
+library(dplyr)
+library(DBI)
+library(RSQLite)
+```
+
+
+**Tengjast gagnagrunninum**
+```{r}
+con <- dbConnect(RSQLite::SQLite(), "C:/Users/Lenovo/Documents/GitHub/data-story-targaryen/data/timataka.db")
+
+# Skoða hvaða töflur eru í gagnagrunninum
+dbListTables(con)
+```
+
+
+**Lesa inn gögn úr hlaup töflunni**
+```{r}
+hlaup_data <- dbReadTable(con, "hlaup")
+```
+
+**Lesa inn gögn úr timataka töflunni**
+```{r}
+timataka_data <- dbReadTable(con, "timataka")
+```
+
+**Skoða hvaða nöfn koma oftar en 14 sinnum fram**
+```{r}
+names_more_than_14 <- timataka_data %>%
+  group_by(Name) %>%
+  summarise(Count = n()) %>%
+  filter(Count > 14)  # Filter til að innihalda aðeins þau nöfn sem koma oftar en 14 sinnum fram
+
+# Sjá hversu oft þau eru að lenda í hvaða sæti/Rank
+rank_counts <- timataka_data %>%
+  filter(Name %in% names_more_than_14$Name) %>%
+  group_by(Name, Rank) %>%
+  summarise(Count = n()) %>%
+  arrange(Name, Rank)
+```
+
+**Telja hversu oft Name dálkurinn er tómur í timataka_data**
+```{r}
+empty_name_count <- sum(timataka_data$Name == "" | is.na(timataka_data$Name))
+
+# Birta niðurstöðurnar
+empty_name_count
+```
+
+**Gera timataka_data2 þar sem búið er að taka út þar sem Name er tómt og Rank er 0 líka**
+```{r}
+timataka_data2 <- timataka_data %>%
+  filter(!(Name == "" & Rank == 0))
+```
+
+
+**Sér töflur með aðeins gögnum um Bergdísi og Eyjólf** 
+```{r}
+# Gera töflu fyrir báða keppendur með aðeins þeirra keppnum
+eyjolfur_data <- timataka_data2 %>%
+  filter(Name == "Eyjólfur Guðgeirsson")
+
+bergdis_data <- timataka_data2 %>%
+  filter(Name == "Bergdís Eva Sveinsdóttir")
+
+# Sameina `eyjolfur_data` með `hlaup_data` til að bæta við heiti hlaups
+eyjolfur_data <- eyjolfur_data %>%
+  left_join(hlaup_data, by = c("hlaup_id" = "id")) %>%  # Match hlaup_id with id in hlaup_data
+  select(hlaup_id, Rank, Name, Time, nafn, Year)  # Select relevant columns and the new 'nafn' (competition name)
+
+# Sameina `bergdis_data` með `hlaup_data` til að bæta við heiti hlaups
+bergdis_data <- bergdis_data %>%
+  left_join(hlaup_data, by = c("hlaup_id" = "id")) %>%  # Match hlaup_id with id in hlaup_data
+  select(hlaup_id, Rank, Name, Time, nafn, Year)  # Select relevant columns and the new 'nafn' (competition name)
+```
+
+
+**Finna sameiginlegar keppnir hjá Bergdísi og Eyjólfi**
+```{r}
+# Finna sameiginlegar keppnir (hlaup_id)
+common_races <- intersect(eyjolfur_data$hlaup_id, bergdis_data$hlaup_id)
+
+# Fá nafnið á keppnin frá hlaup_data með því að nota `id`
+common_races_info <- hlaup_data %>%
+  filter(id %in% common_races) %>%  # Use `id` instead of `hlaup_id`
+  select(id, nafn)
+
+# Birta töfluna
+common_races_info
+
+```
+
+
+
+**Bera þau saman í þessum þrem sameiginlegu keppnum**
+```{r}
+# Filter Bergdís og Eyjólfs eftir sameiginlegum keppnum
+common_races_ids <- common_races_info$id  # Finna gögnin í gegnum hlaup_id (id í hlaup_data)
+
+# Filter bergdis_data fyrir sameiginlegar keppnir
+bergdis_common <- bergdis_data %>%
+  filter(hlaup_id %in% common_races_ids) %>%
+  select(hlaup_id, Name, Time, Rank)
+
+# Filter eyjolfur_data fyrir sameiginlegar keppnir
+eyjolfur_common <- eyjolfur_data %>%
+  filter(hlaup_id %in% common_races_ids) %>%
+  select(hlaup_id, Name, Time, Rank)
+
+
+# Sameina bæði datasets
+combined_data <- bind_rows(bergdis_common, eyjolfur_common)
+
+# Bæta við nöfnunum á keppnunum inn í töfluna
+combined_data <- combined_data %>%
+  left_join(common_races_info, by = c("hlaup_id" = "id")) %>%
+  select(hlaup_id, Name, Time, Rank, nafn)  # Keep relevant columns
+
+# Umbreyta tímanum yfir í numeric mínútur
+combined_data$Time <- as.numeric(as.difftime(combined_data$Time, format = "%H:%M:%S", units = "mins"))
+
+# Breyta/stytta nafna dálkinn fyrir hlaupinn til að hafa þau læsilegri í loka grafinu
+combined_data$nafn <- gsub("KIA Gullhringurinn 2019 - KIA Gullhringurinn 106 km", "KIA Gullhringurinn 2019 - 106 km", combined_data$nafn)
+combined_data$nafn <- gsub("Castelli Classic TT 2022 - Castelli Classic TT: 22 KM - Heildarúrslit", "Castelli Classic TT 2022 - 22 KM", combined_data$nafn)
+combined_data$nafn <- gsub("Fellahringurinn 2019 - Stóri Hringur - 29 KM", "Fellahringurinn 2019 - 29 KM", combined_data$nafn)
+
+# Setja upp línurit
+ggplot(combined_data, aes(x = nafn, y = Time, color = Name, group = Name)) +
+  geom_point(size = 3) +   
+  geom_line(size = 1.5) +  
+  geom_text(aes(label = Rank), 
+            vjust = ifelse(combined_data$Name == "Bergdís Eva Sveinsdóttir", -1.5, 1.5),  # Stilla að rank sé fyrir ofan/neðan punktanna
+            size = 4) +  
+  labs(title = "Samanburður á Time og Rank fyrir Bergdís og Eyjólf",
+       x = "Keppni",
+       y = "Tími (í mínútum)") +  
+  scale_y_continuous(limits = c(0, 300)) +  # Stækka Y-ásinn fyrir betra yfirlit
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Snúa X-ás merkingar fyrir betri læsileika 
+```
+
+
+
+**Bergdís - Tími hennar í Íslandsmótinu í Criterium frá 2021 til 2024**
+```{r}
+library(ggplot2)
+
+# Setja inn aðeins Criterium keppninar inn í sér töflu (hlaup_id 25, 258, 104, 180)
+bergdis_citerium_data <- bergdis_data %>%
+  filter(hlaup_id %in% c(25, 258, 104, 180))
+
+# Bæti við ártalinu fyrir hverja keppni inn í töfluna
+bergdis_citerium_data$Year <- c(2021, 2022, 2023, 2024)
+
+# Umbreyta tímanum úr HH:MM:SS yfir í mínútur
+bergdis_citerium_data$Time <- as.numeric(as.difftime(bergdis_citerium_data$Time, format = "%H:%M:%S", units = "min"))
+
+#Setja upp línurit yfir árangur hennar í keppninni yfir tíma
+ggplot(bergdis_citerium_data, aes(x = Year, y = Time, group = 1)) +
+  geom_line(color = "blue", size = 1.2) +  
+  geom_point(size = 3, color = "red") +   
+  geom_text(aes(label = Rank), vjust = -1, size = 4) +  
+  labs(title = "Bergdís Eva Sveinsdóttir - Íslandsmót í Criterium (2021 til 2024)",
+       x = "Ár",
+       y = "Tími (í mínútum)") +  
+  scale_y_continuous(limits = c(min(bergdis_citerium_data$Time) - 1, max(bergdis_citerium_data$Time) + 5)) +  # Stækka Y-ásinn
+  theme_minimal()
+```
+
+
+**Eyjólfur - Tími hans í Íslandsmótinu í Criterium frá 2021, 2023 og 2024. Sem og tími hans í Fellahringnum 2018, 2019 og 2021**
+```{r}
+# Setja aðeins inn gögninn úr Fellahringnum í sér gagnatöflu
+eyjolfur_fellahringurinn_data <- eyjolfur_data %>%
+  filter(hlaup_id %in% c(322, 228, 23)) %>%
+  mutate(Competition = "Fellahringurinn", Year = c(2018, 2019, 2021))
+
+# Umbreyta tímanum úr HH:MM:SS yfir í mínútur
+eyjolfur_fellahringurinn_data$Time <- as.numeric(as.difftime(eyjolfur_fellahringurinn_data$Time, format = "%H:%M:%S", units = "min"))
+
+# Setja aðeins inn gögninn úr Íslandsmót í Criterium
+eyjolfur_criterium_data <- eyjolfur_data %>%
+  filter(hlaup_id %in% c(26, 105, 181)) %>%
+  mutate(Competition = "Íslandsmót í Criterium", Year = c(2021, 2023, 2024))
+
+# Umbreyta tímanum úr HH:MM:SS yfir í mínútur
+eyjolfur_criterium_data$Time <- as.numeric(as.difftime(eyjolfur_criterium_data$Time, format = "%H:%M:%S", units = "min"))
+
+# Plot fyrir Fellahringurinn
+ggplot(eyjolfur_fellahringurinn_data, aes(x = Year, y = Time, group = 1)) +
+  geom_line(color = "blue", size = 1.2) +   
+  geom_point(size = 3, color = "red") + 
+  geom_text(aes(label = Rank), vjust = -1, size = 4) +
+  labs(title = "Eyjólfur Guðgeirsson - Fellahringurinn (2018-2021)",
+      x = "Ár",
+       y = "Tími (í mínútum)") +  # Adjust y-label based on the time format you have
+  scale_y_continuous(limits = c(min(eyjolfur_fellahringurinn_data$Time) - 1, max(eyjolfur_fellahringurinn_data$Time) + 3)) +  # Extend Y-axis
+  theme_minimal()
+
+# Plot fyrir Íslandsmót í Criterium
+ggplot(eyjolfur_criterium_data, aes(x = Year, y = Time, group = 1)) +
+  geom_line(color = "green", size = 1.2) +   
+  geom_point(size = 3, color = "orange") +
+  geom_text(aes(label = Rank), vjust = -1, size = 4) +
+  labs(title = "Eyjólfur Guðgeirsson - Íslandsmót í Criterium (2021, 2023 og 2024)",
+       x = "Ár",
+       y = "Tími (í mínútum)") +
+  scale_y_continuous(limits = c(min(eyjolfur_criterium_data$Time) - 1, max(eyjolfur_criterium_data$Time) + 5)) +  # Stækka Y-ásinn
+  theme_minimal()
+```
+
+**Fjöldi keppna eftir árum hjá Bergdísi og Eyjólfi**
+```{r}
+#Búa til Ár dálk
+eyjolfur_data <- eyjolfur_data %>%
+  mutate(Ár = str_extract(nafn, "\\d{4}") %>% ifelse(is.na(.), "N/A", .))
+
+bergdis_data <- bergdis_data %>%
+  mutate(Ár = str_extract(nafn, "\\d{4}") %>% ifelse(is.na(.), "N/A", .))
+
+
+# Sameina eyjolfur_data og bergdis_data
+sameina_data <- bind_rows(
+  eyjolfur_data %>% mutate(Name = "Eyjólfur Guðgeirsson"),
+  bergdis_data %>% mutate(Name = "Bergdís Eva Sveinsdóttir")
+)
+
+# Telja fjöldann af keppnum milli ára hjá öllum keppendum
+competitions_per_year <- sameina_data %>%
+  group_by(Name, Ár) %>%
+  summarise(Competition_Count = n()) %>%
+  filter(Ár != "N/A")  # Sleppa röðum með "N/A" fyrir árið
+
+# Búa til bar plot til að bera saman fjölda keppna eftir árum
+ggplot(competitions_per_year, aes(x = Ár, y = Competition_Count, fill = Name)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Nota dodge til að aðskilja per persónu
+  labs(title = "Fjöldi keppna ár hvert hjá Bergdísi og Eyjólfi",
+       x = "Ár",
+       y = "Fjöldi keppna",
+       fill = "Nafn") +
+  theme_minimal()
+```
+
+
+**Hlutfall keppna í efstu 3 sætum**
+```{r}
+# Reikna hlutfall þeirra keppna sem þau hafa lent í top 3 
+top_3_count <- timataka_data2 %>%
+  filter(Name %in% c("Bergdís Eva Sveinsdóttir", "Eyjólfur Guðgeirsson")) %>%
+  mutate(Top_3 = ifelse(Rank <= 3, 1, 0)) %>%
+  group_by(Name) %>%
+  summarise(Top_3_Percentage = sum(Top_3) / n() * 100)
+
+# Plot fyrir hlutfall topp 3 sæta
+ggplot(top_3_count, aes(x = Name, y = Top_3_Percentage, fill = Name)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = paste0(round(Top_3_Percentage, 1), "%")),  # Bæta við prósentu á grafið
+            vjust = -0.5, size = 4) +
+  labs(title = "Hlutfall keppna í topp 3 sæti", x = "Nafn", y = "Prósenta í topp 3 sæti") +
+  theme_minimal()
+```
+
+
+```{r}
+library(stringr)
+library(dplyr)
+
+# Skref 1: Draga út vegalengdina (km eða KM) í nafni keppninnar
+hlaup_data <- hlaup_data %>%
+  mutate(Vegalengd_km = as.numeric(str_extract(nafn, "(\\d+)(?=\\s*[Kk][Mm])")))
+
+# Skref 2: Tengja gögnin úr timataka_data2 og hlaup_data eftir id/hlaup_id
+combined_data <- timataka_data2 %>%
+  left_join(hlaup_data, by = c("hlaup_id" = "id")) %>%
+  select(Name, Time, nafn, Vegalengd_km)  # Halda þeim dálkum sem skipta máli
+
+# Skref 3: Breyta Time dálkinum í mínútur
+combined_data <- combined_data %>%
+  mutate(Time_in_minutes = as.numeric(as.difftime(Time, format = "%H:%M:%S", units = "mins")))
+
+# Skref 4: Reikna meðaltíma (pace) fyrir hvern kílómetra
+combined_data <- combined_data %>%
+  filter(!is.na(Vegalengd_km) & Vegalengd_km > 0) %>%  # Fjarlægja NA eða vegalengdir sem eru 0
+  mutate(Pace_per_km = Time_in_minutes / Vegalengd_km)
+```
+
+```{r}
+library(ggplot2)
+
+# Sía gögn fyrir Bergdísi og Eyjólf
+combined_data_clean <- combined_data %>%
+  filter(Name %in% c("Bergdís Eva Sveinsdóttir", "Eyjólfur Guðgeirsson"))  # Sía aðeins fyrir Bergdísi og Eyjólf
+
+```
+
+
+
+
+```{r}
+# Fjarlægja keppnina "Reykjavíkurmaraþon Íslandsbanka 2018"
+combined_data_clean <- combined_data_clean %>%
+  filter(nafn != "Reykjavíkur maraþon Íslandsbanka 2018 - 10 km") %>%  # Fjarlægir hlaupið úr gögnunum því þar voru þau að hlaupa
+  mutate(nafn_styttra = gsub(" - .*$", "", nafn))  # Stytta keppnisheitin
+# Bæta við ári inn í "Tindur UNBROKEN" nöfnin í nafn_styttra dálkinn til að aðskilja keppnirnar
+combined_data_clean <- combined_data_clean %>%
+  mutate(nafn_styttra = ifelse(str_detect(nafn, "Tindur UNBROKEN"), 
+                               paste0("Tindur UNBROKEN ", str_extract(nafn, "\\d{4}")),
+                               nafn_styttra))
+
+# Nota styttri keppnisheiti í línuritinu
+ggplot(combined_data_clean, aes(x = nafn_styttra, y = Pace_per_km, color = Name, group = Name)) +
+  geom_line(size = 1.5) +     # Búa til línur fyrir hvorn hlaupara
+  geom_point(size = 3) +      # Bæta við punktum á línurnar fyrir hverja keppni
+  labs(title = "Samanburður á meðaltíma (pace) fyrir hvern kílómetra", 
+       x = "Keppni", y = "Pace (mínútur/km)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1))  # Snúa nöfnum á x-ásnum til að gera þau lesanlegri
+```
+
+
